@@ -10,6 +10,7 @@ Supported data types:
 Supported struct tags: `env`, `default`
 
 `env` is a tag which describes environment variable name
+
 `default` is a tag which describes default value for given environment variable
 
 Installation
