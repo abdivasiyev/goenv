@@ -5,7 +5,6 @@ import (
 	"os"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -13,7 +12,6 @@ import (
 type Config struct {
 	EnvTag          string
 	DefaultValueTag string
-	Environment     map[string]string
 }
 
 type ParserFunc func(value string) (interface{}, error)
@@ -125,7 +123,6 @@ func New(envFiles ...string) (Config, error) {
 	return Config{
 		EnvTag:          DefaultTag,
 		DefaultValueTag: DefaultValueTag,
-		Environment:     toMap(os.Environ()),
 	}, nil
 }
 
@@ -172,23 +169,8 @@ func (e Config) isStructPointer(s interface{}) error {
 	return nil
 }
 
-func toMap(envs []string) map[string]string {
-	result := make(map[string]string)
-
-	for _, env := range envs {
-		parsed := strings.Split(env, "=")
-
-		if len(parsed) == 2 {
-			key, val := parsed[0], parsed[1]
-			result[key] = val
-		}
-	}
-
-	return result
-}
-
 func (e Config) getOrDefault(key string, defaultValue string) string {
-	if v, ok := e.Environment[key]; ok {
+	if v, ok := os.LookupEnv(key); ok {
 		return v
 	}
 
