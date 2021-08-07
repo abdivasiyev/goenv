@@ -136,6 +136,12 @@ func (e Config) Parse(s interface{}) error {
 	for i := 0; i < t.NumField(); i++ {
 		sf := t.Field(i)
 
+		if err := e.isStructPointer(sf); err == nil {
+			if err := e.Parse(sf); err != nil {
+				return err
+			}
+		}
+
 		key, defaultValue := sf.Tag.Get(e.EnvTag), sf.Tag.Get(e.DefaultValueTag)
 		if key != "" {
 			value := e.getOrDefault(key, defaultValue)

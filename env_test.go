@@ -389,7 +389,9 @@ func TestParse(t *testing.T) {
 	// FEE_PERCENT=3.3
 	// INVALID_VALUE=true
 	config := struct {
-		Debug      bool    `env:"DEBUG" default:"true"`
+		App struct {
+			Debug bool `env:"DEBUG" default:"true"`
+		}
 		DBName     string  `env:"DB_NAME" default:"postgres"`
 		Port       int64   `env:"PORT" default:"8080"`
 		FeePercent float32 `env:"FEE_PERCENT" default:"1"`
@@ -399,7 +401,7 @@ func TestParse(t *testing.T) {
 		t.Errorf("error parsing env to struct: %v\n", err)
 	}
 
-	if config.Debug != false {
+	if config.App.Debug != false {
 		t.Errorf("error parsing bool value\n")
 	}
 
