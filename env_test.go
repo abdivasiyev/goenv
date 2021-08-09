@@ -383,14 +383,14 @@ func TestParse(t *testing.T) {
 	}
 
 	// values in the .env file
-	// DEBUG=false
+	// LOG_LEVEL=error
 	// DB_NAME not set
 	// PORT=8081
 	// FEE_PERCENT=3.3
 	// INVALID_VALUE=true
 	config := struct {
 		App struct {
-			Debug bool `env:"DEBUG" default:"true"`
+			LogLevel string `env:"LOG_LEVEL" default:"debug"`
 		}
 		DBName     string  `env:"DB_NAME" default:"postgres"`
 		Port       int64   `env:"PORT" default:"8080"`
@@ -401,16 +401,16 @@ func TestParse(t *testing.T) {
 		t.Errorf("error parsing env to struct: %v\n", err)
 	}
 
-	if config.App.Debug != false {
-		t.Errorf("error parsing bool value\n")
+	if config.App.LogLevel != "error" {
+		t.Errorf("error parsing nested struct value\n")
 	}
 
 	if config.DBName != "postgres" {
-		t.Errorf("error parsing with default value\n")
+		t.Errorf("error parsing with default value: %v\n", config.DBName)
 	}
 
 	if config.Port != 8081 {
-		t.Errorf("error parsing int64\n")
+		t.Errorf("error parsing int64: %v\n", config.Port)
 	}
 
 	if config.FeePercent != float32(3.3) {

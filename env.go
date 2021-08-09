@@ -127,49 +127,46 @@ func New(envFiles ...string) (Config, error) {
 }
 
 func (e Config) Parse(s interface{}) error {
-	if err := e.isStructPointer(s); err != nil {
-		return err
+	reflectValue := reflect.ValueOf(s)
+	if reflectValue.Kind() != reflect.Ptr || reflectValue.IsNil() {
+		return ErrNoPtr
 	}
 
-	v := reflect.ValueOf(s).Elem()
-	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
-		sf := t.Field(i)
+	reflectValue = reflectValue.Elem()
 
-		if err := e.isStructPointer(sf); err == nil {
-			if err := e.Parse(sf); err != nil {
+	if reflectValue.Kind() != reflect.Struct {
+		return ErrNoStruct
+	}
+
+	t := reflectValue.Type()
+
+	for i := 0; i < reflectValue.NumField(); i++ {
+		valueField := reflectValue.Field(i)
+		if valueField.Kind() == reflect.Struct {
+			if !valueField.Addr().CanInterface() {
+				continue
+			}
+
+			iFace := valueField.Addr().Interface()
+			if err := e.Parse(iFace); err != nil {
 				return err
 			}
 		}
 
-		key, defaultValue := sf.Tag.Get(e.EnvTag), sf.Tag.Get(e.DefaultValueTag)
+		typeField := t.Field(i)
+		key, defaultValue := typeField.Tag.Get(e.EnvTag), typeField.Tag.Get(e.DefaultValueTag)
 		if key != "" {
 			value := e.getOrDefault(key, defaultValue)
 
-			parser := BuiltInParsers[sf.Type.Kind()]
+			parser := BuiltInParsers[typeField.Type.Kind()]
 
 			parsedValue, err := parser(value)
 			if err != nil {
 				return err
 			}
 
-			v.Field(i).Set(reflect.ValueOf(parsedValue))
+			reflectValue.Field(i).Set(reflect.ValueOf(parsedValue))
 		}
-	}
-
-	return nil
-}
-
-func (e Config) isStructPointer(s interface{}) error {
-	v := reflect.ValueOf(s)
-	if v.Kind() != reflect.Ptr {
-		return ErrNoPtr
-	}
-
-	v = v.Elem()
-
-	if v.Kind() != reflect.Struct {
-		return ErrNoStruct
 	}
 
 	return nil
