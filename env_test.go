@@ -395,6 +395,7 @@ func TestParse(t *testing.T) {
 		DBName     string  `env:"DB_NAME" default:"postgres"`
 		Port       int64   `env:"PORT" default:"8080"`
 		FeePercent float32 `env:"FEE_PERCENT" default:"1"`
+		URL        string  `env:"URL" required:"true" default:"https://google.com"`
 	}{}
 
 	if err := env.Parse(&config); err != nil {

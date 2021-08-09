@@ -2,6 +2,7 @@ package goenv
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -10,8 +11,9 @@ import (
 )
 
 type Config struct {
-	EnvTag          string
-	DefaultValueTag string
+	EnvTag           string
+	DefaultValueTag  string
+	RequiredValueTag string
 }
 
 type ParserFunc func(value string) (interface{}, error)
@@ -21,12 +23,13 @@ var (
 	ErrNoStruct = errors.New("given parameter is not a struct")
 	// ErrNoPtr error when given parameter is not pointer
 	ErrNoPtr = errors.New("given parameter is not a pointer")
-
 	// DefaultTag tag for loading env key names from struct
 	DefaultTag = "env"
 
 	// Default value of env variable
 	DefaultValueTag = "default"
+	// Required env variable
+	DefaultRequiredTag = "required"
 
 	// Built-in parser functions
 	BuiltInParsers = map[reflect.Kind]ParserFunc{
@@ -121,8 +124,9 @@ func New(envFiles ...string) (Config, error) {
 	}
 
 	return Config{
-		EnvTag:          DefaultTag,
-		DefaultValueTag: DefaultValueTag,
+		EnvTag:           DefaultTag,
+		DefaultValueTag:  DefaultValueTag,
+		RequiredValueTag: DefaultRequiredTag,
 	}, nil
 }
 
@@ -155,6 +159,8 @@ func (e Config) Parse(s interface{}) error {
 
 		typeField := t.Field(i)
 		key, defaultValue := typeField.Tag.Get(e.EnvTag), typeField.Tag.Get(e.DefaultValueTag)
+		isRequired := typeField.Tag.Get(e.RequiredValueTag) == "true"
+
 		if key != "" {
 			value := e.getOrDefault(key, defaultValue)
 
@@ -163,6 +169,10 @@ func (e Config) Parse(s interface{}) error {
 			parsedValue, err := parser(value)
 			if err != nil {
 				return err
+			}
+
+			if parsedValue == "" && isRequired {
+				return fmt.Errorf("%s required", key)
 			}
 
 			reflectValue.Field(i).Set(reflect.ValueOf(parsedValue))
