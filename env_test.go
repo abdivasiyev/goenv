@@ -363,11 +363,11 @@ func TestParse(t *testing.T) {
 
 	conf := "config"
 
-	if err := env.Parse(conf); err == nil {
+	if err := env.Parse(conf, nil); err == nil {
 		t.Errorf("error parsing env to struct without pointer\n")
 	}
 
-	if err := env.Parse(&conf); err == nil {
+	if err := env.Parse(&conf, nil); err == nil {
 		t.Errorf("error parsing env to struct\n")
 	}
 
@@ -378,7 +378,7 @@ func TestParse(t *testing.T) {
 		InvalidValue int64 `env:"INVALID_VALUE" default:"1"`
 	}{}
 
-	if err := env.Parse(&cfg); err == nil {
+	if err := env.Parse(&cfg, nil); err == nil {
 		t.Errorf("error parsing env to struct: %v\n", err)
 	}
 
@@ -398,7 +398,77 @@ func TestParse(t *testing.T) {
 		URL        string  `env:"URL" required:"true" default:"https://google.com"`
 	}{}
 
-	if err := env.Parse(&config); err != nil {
+	if err := env.Parse(&config, nil); err != nil {
+		t.Errorf("error parsing env to struct: %v\n", err)
+	}
+
+	if config.App.LogLevel != "error" {
+		t.Errorf("error parsing nested struct value\n")
+	}
+
+	if config.DBName != "postgres" {
+		t.Errorf("error parsing with default value: %v\n", config.DBName)
+	}
+
+	if config.Port != 8081 {
+		t.Errorf("error parsing int64: %v\n", config.Port)
+	}
+
+	if config.FeePercent != float32(3.3) {
+		t.Errorf("error parsing float32\n")
+	}
+}
+
+func TestParseMap(t *testing.T) {
+	TestNew(t)
+
+	env, _ := New()
+
+	conf := "config"
+
+	if err := env.Parse(conf, nil); err == nil {
+		t.Errorf("error parsing env to struct without pointer\n")
+	}
+
+	if err := env.Parse(&conf, nil); err == nil {
+		t.Errorf("error parsing env to struct\n")
+	}
+
+	// with invalid value
+	// value in the .env file
+	// INVALID_VALUE=true
+	cfg := struct {
+		InvalidValue int64 `env:"INVALID_VALUE" default:"1"`
+	}{}
+
+	if err := env.Parse(&cfg, map[string]string{
+		"INVALID_VALUE": "true",
+	}); err == nil {
+		t.Errorf("error parsing env to struct: %v\n", err)
+	}
+
+	// values in the .env file
+	// LOG_LEVEL=error
+	// DB_NAME not set
+	// PORT=8081
+	// FEE_PERCENT=3.3
+	// INVALID_VALUE=true
+	config := struct {
+		App struct {
+			LogLevel string `env:"LOG_LEVEL" default:"debug"`
+		}
+		DBName     string  `env:"DB_NAME" default:"postgres"`
+		Port       int64   `env:"PORT" default:"8080"`
+		FeePercent float32 `env:"FEE_PERCENT" default:"1"`
+		URL        string  `env:"URL" required:"true" default:"https://google.com"`
+	}{}
+
+	if err := env.Parse(&config, map[string]string{
+		"LOG_LEVEL":     "error",
+		"PORT":          "8081",
+		"FEE_PERCENT":   "3.3",
+		"INVALID_VALUE": "true",
+	}); err != nil {
 		t.Errorf("error parsing env to struct: %v\n", err)
 	}
 

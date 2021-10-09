@@ -130,7 +130,7 @@ func New(envFiles ...string) (Config, error) {
 	}, nil
 }
 
-func (e Config) Parse(s interface{}) error {
+func (e Config) Parse(s interface{}, data map[string]string) error {
 	reflectValue := reflect.ValueOf(s)
 	if reflectValue.Kind() != reflect.Ptr || reflectValue.IsNil() {
 		return ErrNoPtr
@@ -152,34 +152,61 @@ func (e Config) Parse(s interface{}) error {
 			}
 
 			iFace := valueField.Addr().Interface()
-			if err := e.Parse(iFace); err != nil {
+			if err := e.Parse(iFace, data); err != nil {
 				return err
 			}
 		}
 
 		typeField := t.Field(i)
-		key, defaultValue := typeField.Tag.Get(e.EnvTag), typeField.Tag.Get(e.DefaultValueTag)
-		isRequired := typeField.Tag.Get(e.RequiredValueTag) == "true"
+		parsedValue, err := e.parseValue(typeField, data)
 
-		if key != "" {
-			value := e.getOrDefault(key, defaultValue)
+		if err != nil {
+			return err
+		}
 
-			parser := BuiltInParsers[typeField.Type.Kind()]
-
-			parsedValue, err := parser(value)
-			if err != nil {
-				return err
-			}
-
-			if parsedValue == "" && isRequired {
-				return fmt.Errorf("%s required", key)
-			}
-
+		if parsedValue != nil {
 			reflectValue.Field(i).Set(reflect.ValueOf(parsedValue))
 		}
 	}
 
 	return nil
+}
+
+func (e Config) parseValue(typeField reflect.StructField, data map[string]string) (interface{}, error) {
+	key, defaultValue := typeField.Tag.Get(e.EnvTag), typeField.Tag.Get(e.DefaultValueTag)
+	isRequired := typeField.Tag.Get(e.RequiredValueTag) == "true"
+
+	if key != "" {
+		var value string
+		if data != nil {
+			value = e.getOrDefaultMap(key, defaultValue, data)
+		} else {
+			value = e.getOrDefault(key, defaultValue)
+		}
+
+		parser := BuiltInParsers[typeField.Type.Kind()]
+
+		parsedValue, err := parser(value)
+		if err != nil {
+			return nil, err
+		}
+
+		if parsedValue == "" && isRequired {
+			return nil, fmt.Errorf("%s required", key)
+		}
+
+		return parsedValue, nil
+	}
+
+	return nil, nil
+}
+
+func (e Config) getOrDefaultMap(key string, defaultValue string, data map[string]string) string {
+	if v, ok := data[key]; ok {
+		return string(v)
+	}
+
+	return defaultValue
 }
 
 func (e Config) getOrDefault(key string, defaultValue string) string {
