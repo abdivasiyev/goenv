@@ -180,7 +180,9 @@ func (e Config) parseValue(typeField reflect.StructField, data map[string]string
 		var value string
 		if data != nil {
 			value = e.getOrDefaultMap(key, defaultValue, data)
-		} else {
+		}
+		
+		if value == "" {
 			value = e.getOrDefault(key, defaultValue)
 		}
 
