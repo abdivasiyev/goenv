@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"log"
 
 	"github.com/joho/godotenv"
 )
@@ -120,7 +121,7 @@ var (
 
 func New(envFiles ...string) (Config, error) {
 	if err := godotenv.Load(envFiles...); err != nil {
-		return Config{}, err
+		log.Println(err)
 	}
 
 	return Config{
